@@ -8,6 +8,8 @@ export interface ScenarioStep {
   text: string
   /** Restore the state at the end of step k first (-1 = the scenario start). */
   rewindTo?: number
+  /** Name of the alternative this step starts (steps with rewindTo begin a new branch) */
+  branch?: string
   /** Actions applied when the step starts. */
   run?: (sim: Simulation) => void
   /** The step plays until this holds (or maxTime of simulated ms elapse). */

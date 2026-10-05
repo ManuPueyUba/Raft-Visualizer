@@ -160,6 +160,7 @@ const termInflation: Scenario = {
       title: 'Replay with Pre-Vote',
       text: 'Back to the start, now with Pre-Vote on. Before incrementing its term, S5 asks “would you vote for me?”. Nobody answers, so its term never changes.',
       rewindTo: -1,
+      branch: 'With Pre-Vote',
       run: (sim) => {
         sim.updateSettings({ preVote: true })
         sim.setPartition([['S5'], ['S1', 'S2', 'S3', 'S4']])
@@ -210,6 +211,7 @@ const laggingFollower: Scenario = {
       title: 'Replay with fast backup',
       text: 'Same situation with fast backup: S3 answers “my log ends at index 0” (conflictIndex), and S2 jumps straight there. One round trip instead of eight.',
       rewindTo: -1,
+      branch: 'With fast backup',
       run: (sim) => {
         sim.updateSettings({ fastBackup: true })
         sim.restart('S3')
@@ -261,6 +263,7 @@ const oldLeader: Scenario = {
       title: 'Replay with CheckQuorum',
       text: 'Back to the start, with CheckQuorum on: a leader that has not heard from a majority within an election timeout steps down by itself. S1 stops accepting writes instead of pretending to lead.',
       rewindTo: -1,
+      branch: 'With CheckQuorum',
       run: (sim) => {
         sim.updateSettings({ checkQuorum: true })
         sim.setPartition([['S1', 'S2'], ['S3', 'S4', 'S5']])
@@ -346,6 +349,7 @@ const figure8: Scenario = {
       title: '(e) Alternative: S1 commits an entry of its own term',
       text: 'Rewind to (c). This time S1 replicates a new entry 3 from term 4 to a majority. Once entry 3 is committed, entry 2 is committed with it (Log Matching). Now S5 can never be elected: a majority has a log ending in term 4.',
       rewindTo: 2,
+      branch: '(e) own-term entry',
       run: (sim) => sim.propose('S1', { op: 'set', key: 'x', value: '4' }),
       until: (sim) => node(sim, 'S1').commitIndex >= 3 && quiet(sim, 'S1'),
       focus: 'commit',
@@ -366,6 +370,7 @@ const figure8: Scenario = {
       title: 'Unsafe: count replicas of old entries',
       text: 'Rewind to (c) again, now with the current-term rule switched off. S1 sees entry 2 on a majority and commits it — x=2 is applied and would be acknowledged to a client.',
       rewindTo: 2,
+      branch: 'unsafe rule',
       run: (sim) => sim.updateSettings({ unsafeCommitOldTerms: true }),
       until: (sim) => node(sim, 'S1').commitIndex >= 2 && quiet(sim, 'S1'),
       focus: 'commit',

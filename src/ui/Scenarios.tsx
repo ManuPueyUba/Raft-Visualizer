@@ -1,5 +1,5 @@
 import { SCENARIOS } from '../scenarios/library'
-import type { ScenarioCategory } from '../scenarios/types'
+import type { Scenario, ScenarioCategory } from '../scenarios/types'
 import { VERSION_BY_ID } from '../scenarios/versions'
 import { useSim } from '../store/simStore'
 
@@ -75,29 +75,48 @@ export function ScenarioCard() {
     <div className="panel absolute right-3 top-3 z-10 w-[340px] p-4 shadow-xl shadow-black/40">
       <div className="mb-1 label">{sc.category}</div>
       <div className="mb-3 text-[14px] font-semibold leading-snug">{sc.title}</div>
-      {/* the step bar is the only navigation: click a segment to play that step */}
-      <div className="mb-3 flex gap-1">
-        {sc.steps.map((s_, i) => {
-          const done = i < step || (i === step && !playing)
-          const isNext = i === next && !playing && !beats
-          return (
-            <button key={i} onClick={() => st.jumpToStep(i, true)} title={`Play step ${i + 1}: ${s_.title}`} className="group flex-1">
-              <span
-                className={`mono flex h-5 items-center justify-center rounded-md text-[10px] font-semibold transition-colors ${
-                  done
-                    ? 'bg-[#7c9cff] text-[#0b0d12]'
-                    : i === step
-                      ? 'bg-[#7c9cff]/45 text-white'
-                      : isNext
-                        ? 'animate-pulse bg-[#7c9cff]/25 text-[#c7d4ff] ring-1 ring-[#7c9cff]/70'
-                        : 'bg-[#232935] text-[var(--text-faint)] group-hover:bg-[#2f3747] group-hover:text-[var(--text)]'
-                }`}
-              >
-                {i + 1}
-              </span>
-            </button>
-          )
-        })}
+      {/* the step bar is the only navigation: click a segment to play that step.
+          Alternatives (steps that rewind) get their own row, starting under their branch point. */}
+      <div className="mb-3 flex flex-col gap-1.5">
+        {layoutSteps(sc.steps).rows.map((row, r) => (
+          <div key={r}>
+            {row.label && (
+              <div className="mb-0.5 text-[10px] text-[var(--text-faint)]" style={{ paddingLeft: `${(row.start / row.cols) * 100}%` }}>
+                ↳ {row.label}
+              </div>
+            )}
+            <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${row.cols}, minmax(0, 1fr))` }}>
+              {row.start > 0 && (
+                <span
+                  className="mb-2.5 ml-[45%] rounded-bl-md border-b border-l border-dashed border-[#3a4356]"
+                  style={{ gridColumn: `${row.start} / span 1`, gridRow: 1 }}
+                />
+              )}
+              {row.items.map(({ i, col }) => {
+                const s_ = sc.steps[i]
+                const done = run.states.length > i + 1 && (i < step || (i === step && !playing))
+                const isNext = i === next && !playing && !beats
+                return (
+                  <button key={i} onClick={() => st.jumpToStep(i, true)} title={`Play step ${i + 1}: ${s_.title}`} className="group" style={{ gridColumn: `${col + 1} / span 1`, gridRow: 1 }}>
+                    <span
+                      className={`mono flex h-5 items-center justify-center rounded-md text-[10px] font-semibold transition-colors ${
+                        i === step && playing
+                          ? 'bg-[#7c9cff]/45 text-white'
+                          : done
+                            ? 'bg-[#7c9cff] text-[#0b0d12]'
+                            : isNext
+                              ? 'animate-pulse bg-[#7c9cff]/25 text-[#c7d4ff] ring-1 ring-[#7c9cff]/70'
+                              : 'bg-[#232935] text-[var(--text-faint)] group-hover:bg-[#2f3747] group-hover:text-[var(--text)]'
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
       {(() => {
         // at a pause the card already shows what comes next; while a step plays, that step
@@ -140,4 +159,29 @@ export function ScenarioCard() {
       )}
     </div>
   )
+}
+
+interface StepRow {
+  label?: string
+  /** column where the row's first step sits (0 for the main line) */
+  start: number
+  cols: number
+  items: { i: number; col: number }[]
+}
+
+/** Puts every step in a column; a step that rewinds starts a new row right after the step it rewinds to. */
+function layoutSteps(steps: Scenario['steps']): { rows: StepRow[] } {
+  const col: number[] = []
+  const rows: StepRow[] = []
+  steps.forEach((s, i) => {
+    if (i === 0 || s.rewindTo !== undefined) {
+      const start = s.rewindTo === undefined || s.rewindTo < 0 ? 0 : col[s.rewindTo] + 1
+      rows.push({ label: i === 0 ? undefined : (s.branch ?? 'Alternative'), start, cols: 0, items: [] })
+      col[i] = start
+    } else col[i] = col[i - 1] + 1
+    rows[rows.length - 1].items.push({ i, col: col[i] })
+  })
+  const cols = Math.max(...col) + 1
+  for (const r of rows) r.cols = cols
+  return { rows }
 }
