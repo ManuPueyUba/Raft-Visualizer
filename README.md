@@ -7,6 +7,8 @@ log compaction and client interaction — plus common optimizations as toggles.
 
 Made for the Sistemas Distribuidos course at FIUBA.
 
+**Live demo:** https://manupueyuba.github.io/Raft-Visualizer/
+
 ## Features
 
 - **Cluster view**: servers in a ring with election-timeout rings, animated RPCs (click any
